@@ -238,6 +238,8 @@ class SparkContext(config: SparkConf) extends Logging {
   private var _plugins: Option[PluginContainer] = None
   private var _resourceProfileManager: ResourceProfileManager = _
 
+  private var _customPerformanceEstimator: Option[PerformanceEstimatorInterface] = None
+
   /* ------------------------------------------------------------------------------------- *
    | Accessors and public fields. These provide access to the internal state of the        |
    | context.                                                                              |
@@ -374,6 +376,8 @@ class SparkContext(config: SparkConf) extends Logging {
     }
     override protected def initialValue(): Properties = new Properties()
   }
+
+  def getPerformanceEstimator: Option[PerformanceEstimatorInterface] = _customPerformanceEstimator
 
   /* ------------------------------------------------------------------------------------- *
    | Initialization. This code initializes the context in a manner that is exception-safe. |
@@ -569,6 +573,19 @@ class SparkContext(config: SparkConf) extends Logging {
     // retrieve "HeartbeatReceiver" in the constructor. (SPARK-6640)
     _heartbeatReceiver = env.rpcEnv.setupEndpoint(
       HeartbeatReceiver.ENDPOINT_NAME, new HeartbeatReceiver(this))
+
+    // Add performance estimator if configured
+    // This has to happen before taskScheudler is initialized, but after listenerBus is initilaized
+    val estimator = _conf.get("spark.customPerformanceEstimator", null)
+    if (estimator != null) {
+      val customPerformanceEstimator = Utils.classForName(estimator)
+        .getConstructor()
+        .newInstance().asInstanceOf[PerformanceEstimatorInterface]
+      customPerformanceEstimator.registerListener(listenerBus)
+      customPerformanceEstimator.startEstimationThread()
+      _customPerformanceEstimator = Some(customPerformanceEstimator)
+
+    }
 
     // Initialize any plugins before the task scheduler is initialized.
     _plugins = PluginContainer(this, _resources.asJava)
@@ -2315,6 +2332,10 @@ class SparkContext(config: SparkConf) extends Logging {
     ResourceProfile.clearDefaultProfile()
     // Unset YARN mode system env variable, to allow switching between cluster types.
     SparkContext.clearActiveContext()
+
+    // Stop estimation thread
+    _customPerformanceEstimator.foreach(estimator => estimator.shutdown())
+
     logInfo("Successfully stopped SparkContext")
   }
 
