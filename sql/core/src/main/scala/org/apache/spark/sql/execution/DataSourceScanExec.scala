@@ -673,7 +673,7 @@ case class FileSourceScanExec(
       selectedPartitions: Array[PartitionDirectory]): RDD[InternalRow] = {
     val openCostInBytes = relation.sparkSession.sessionState.conf.filesOpenCostInBytes
     val maxSplitBytes =
-      FilePartition.maxSplitBytes(relation.sparkSession, selectedPartitions)
+      FilePartition.maxSplitBytes(relation.sparkSession, selectedPartitions, id)
     logInfo(s"Planning scan with bin packing, max size: $maxSplitBytes bytes, " +
       s"open cost is considered as scanning $openCostInBytes bytes.")
 

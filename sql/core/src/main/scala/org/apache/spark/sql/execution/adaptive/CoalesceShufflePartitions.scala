@@ -54,7 +54,7 @@ case class CoalesceShufflePartitions(session: SparkSession) extends AQEShuffleRe
     // COALESCE_PARTITIONS_MIN_PARTITION_SIZE (default 1MB).
     // For history reason, this rule also need to support the config
     // COALESCE_PARTITIONS_MIN_PARTITION_NUM. We should remove this config in the future.
-    val minNumPartitions = conf.getConf(SQLConf.COALESCE_PARTITIONS_MIN_PARTITION_NUM).getOrElse {
+    var minNumPartitions = conf.getConf(SQLConf.COALESCE_PARTITIONS_MIN_PARTITION_NUM).getOrElse {
       if (conf.getConf(SQLConf.COALESCE_PARTITIONS_PARALLELISM_FIRST)) {
         // We fall back to Spark default parallelism if the minimum number of coalesced partitions
         // is not set, so to avoid perf regressions compared to no coalescing.
@@ -71,13 +71,24 @@ case class CoalesceShufflePartitions(session: SparkSession) extends AQEShuffleRe
     // "coalesce groups", and all shuffle stages within each group have to be coalesced together.
     val coalesceGroups = collectCoalesceGroups(plan)
 
+
+
+    val sizes =
+      coalesceGroups.map(_.flatMap(_.shuffleStage.mapStats.map(_.bytesByPartitionId.sum)).sum)
+    val totalSize = sizes.sum
+
+    val customPartitioner = session.sharedState.customPartitioner
+    if (customPartitioner != null) {
+      minNumPartitions = customPartitioner.getMinNumPartitions(session, plan, totalSize)
+    }
+
+    logInfo("###### coalesce shuffle: " +"size: " +
+      totalSize  + "minNumPartitions: " + minNumPartitions)
+
     // Divide minimum task parallelism among coalesce groups according to their data sizes.
     val minNumPartitionsByGroup = if (coalesceGroups.length == 1) {
       Seq(math.max(minNumPartitions, 1))
     } else {
-      val sizes =
-        coalesceGroups.map(_.flatMap(_.shuffleStage.mapStats.map(_.bytesByPartitionId.sum)).sum)
-      val totalSize = sizes.sum
       sizes.map { size =>
         val num = if (totalSize > 0) {
           math.round(minNumPartitions * 1.0 * size / totalSize)

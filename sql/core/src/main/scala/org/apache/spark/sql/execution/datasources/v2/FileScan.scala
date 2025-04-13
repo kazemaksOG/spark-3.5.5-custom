@@ -132,7 +132,7 @@ trait FileScan extends Scan
 
   protected def partitions: Seq[FilePartition] = {
     val selectedPartitions = fileIndex.listFiles(partitionFilters, dataFilters)
-    val maxSplitBytes = FilePartition.maxSplitBytes(sparkSession, selectedPartitions)
+    val maxSplitBytes = FilePartition.maxSplitBytes(sparkSession, selectedPartitions, -1)
     val partitionAttributes = toAttributes(fileIndex.partitionSchema)
     val attributeMap = partitionAttributes.map(a => normalizeName(a.name) -> a).toMap
     val readPartitionAttributes = readPartitionSchema.map { readField =>
@@ -143,6 +143,8 @@ trait FileScan extends Scan
     }
     lazy val partitionValueProject =
       GenerateUnsafeProjection.generate(readPartitionAttributes, partitionAttributes)
+    logInfo("###### filescan called" )
+    logTrace("###### filescan trace")
     val splitFiles = selectedPartitions.flatMap { partition =>
       // Prune partition values if part of the partition columns are not required.
       val partitionValues = if (readPartitionAttributes != partitionAttributes) {

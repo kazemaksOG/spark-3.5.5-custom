@@ -108,7 +108,8 @@ object FilePartition extends Logging {
 
   def maxSplitBytes(
       sparkSession: SparkSession,
-      selectedPartitions: Seq[PartitionDirectory]): Long = {
+      selectedPartitions: Seq[PartitionDirectory],
+      executionId: Int): Long = {
     val defaultMaxSplitBytes = sparkSession.sessionState.conf.filesMaxPartitionBytes
     val openCostInBytes = sparkSession.sessionState.conf.filesOpenCostInBytes
     val minPartitionNum = sparkSession.sessionState.conf.filesMinPartitionNum
@@ -116,6 +117,16 @@ object FilePartition extends Logging {
     val totalBytes = selectedPartitions.flatMap(_.files.map(_.getLen + openCostInBytes)).sum
     val bytesPerCore = totalBytes / minPartitionNum
 
-    Math.min(defaultMaxSplitBytes, Math.max(openCostInBytes, bytesPerCore))
+    // If custom partitioner defined, get maxSplit bytes from there
+    val customPartitioner = sparkSession.sharedState.customPartitioner
+    if (customPartitioner != null) {
+      customPartitioner.getMaxSplitBytes(sparkSession,
+        openCostInBytes,
+        minPartitionNum,
+        totalBytes,
+        executionId)
+    } else {
+      Math.min(defaultMaxSplitBytes, Math.max(openCostInBytes, bytesPerCore))
+    }
   }
 }

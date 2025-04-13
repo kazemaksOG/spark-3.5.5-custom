@@ -31,6 +31,7 @@ import org.apache.spark.sql.internal.SQLConf
 @DeveloperApi
 class SparkPlanInfo(
     val nodeName: String,
+    val nodeId: Int,
     val simpleString: String,
     val children: Seq[SparkPlanInfo],
     val metadata: Map[String, String],
@@ -71,6 +72,7 @@ private[execution] object SparkPlanInfo {
     }
     new SparkPlanInfo(
       plan.nodeName,
+      plan.id,
       plan.simpleString(SQLConf.get.maxToStringFields),
       children.map(fromSparkPlan),
       metadata,

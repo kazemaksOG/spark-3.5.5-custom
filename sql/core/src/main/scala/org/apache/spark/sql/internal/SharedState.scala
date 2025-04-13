@@ -33,6 +33,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.catalog._
 import org.apache.spark.sql.errors.QueryExecutionErrors
 import org.apache.spark.sql.execution.CacheManager
+import org.apache.spark.sql.execution.datasources.CustomPartitioner
 import org.apache.spark.sql.execution.streaming.StreamExecution
 import org.apache.spark.sql.execution.ui.{SQLAppStatusListener, SQLAppStatusStore, SQLTab, StreamingQueryStatusStore}
 import org.apache.spark.sql.internal.StaticSQLConf._
@@ -185,6 +186,17 @@ private[sql] class SharedState(
   val jarClassLoader = new NonClosableMutableURLClassLoader(
     org.apache.spark.util.Utils.getContextOrSparkClassLoader)
 
+  // Adding custom partitioner if defined
+  val customPartitioner = {
+    val partitioner = conf.get("spark.customPartitioner", null)
+    if (partitioner != null) {
+      Utils.classForName(partitioner)
+        .getConstructor()
+        .newInstance().asInstanceOf[CustomPartitioner]
+    } else {
+      null
+    }
+  }
 }
 
 object SharedState extends Logging {

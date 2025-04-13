@@ -14,19 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.spark.scheduler
+package org.apache.spark.sql.execution.datasources
 
-class JobRuntime(val id: Long, val time: Long)
-object JobRuntime {
-  val JOB_INVALID_ID: Long = -1
-}
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.execution.SparkPlan
 
-trait PerformanceEstimatorInterface {
-  def getStageRuntime(stageId: Int): Long
-  def getJobRuntime(stageId: Int): JobRuntime
-  def getSqlRuntime(sqlId: Int, totalSize: Long): Long
-  def registerListener(listenerBus: LiveListenerBus): Unit
-  def startEstimationThread(): Unit
-  def shutdown(): Unit
+trait CustomPartitioner {
+  def getMaxSplitBytes(sparkSession: SparkSession,
+                       openCostInBytes: Long,
+                       minPartitionNum: Int,
+                       totalBytes: Long,
+                       sqlId: Int): Long
+  def getMinNumPartitions(session: SparkSession, plan: SparkPlan, totalSize: Long): Int
 }
 
