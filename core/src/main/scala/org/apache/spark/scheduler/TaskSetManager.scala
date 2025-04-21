@@ -551,7 +551,7 @@ private[spark] class TaskSetManager(
     // a good proxy to task serialization time.
     // val timeTaken = clock.getTime() - startTime
     val tName = taskName(taskId)
-    logInfo(s"Starting $tName ($host, executor ${info.executorId}, " +
+    logInfo(s"Starting $tName ($host, executor ${info.executorId}, deadline $deadline " +
       s"partition ${task.partitionId}, $taskLocality, ${serializedTask.limit()} bytes) " +
       (if (taskResourceAssignments.nonEmpty) s"taskResourceAssignments ${taskResourceAssignments}"
       else ""))
