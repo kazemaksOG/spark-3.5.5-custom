@@ -17,13 +17,14 @@
 
 package org.apache.spark.sql.execution
 
+import java.util.Properties
+
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.sql.execution.adaptive.{AdaptiveSparkPlanExec, QueryStageExec}
 import org.apache.spark.sql.execution.columnar.InMemoryTableScanExec
 import org.apache.spark.sql.execution.exchange.ReusedExchangeExec
 import org.apache.spark.sql.execution.metric.SQLMetricInfo
 import org.apache.spark.sql.internal.SQLConf
-
 /**
  * :: DeveloperApi ::
  * Stores information about a SQL SparkPlan.
@@ -32,6 +33,7 @@ import org.apache.spark.sql.internal.SQLConf
 class SparkPlanInfo(
     val nodeName: String,
     val nodeId: Int,
+    val properties: Properties,
     val simpleString: String,
     val children: Seq[SparkPlanInfo],
     val metadata: Map[String, String],
@@ -70,9 +72,11 @@ private[execution] object SparkPlanInfo {
       case fileScan: FileSourceScanExec => fileScan.metadata
       case _ => Map[String, String]()
     }
+    val properties = plan.session.sparkContext.localProperties.get()
     new SparkPlanInfo(
       plan.nodeName,
       plan.id,
+      properties,
       plan.simpleString(SQLConf.get.maxToStringFields),
       children.map(fromSparkPlan),
       metadata,
