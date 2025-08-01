@@ -32,12 +32,12 @@ import org.apache.spark.sql.internal.SQLConf
 @DeveloperApi
 class SparkPlanInfo(
     val nodeName: String,
-    val nodeId: Int = 0,
-    val properties: Properties = new Properties(),
     val simpleString: String,
     val children: Seq[SparkPlanInfo],
     val metadata: Map[String, String],
-    val metrics: Seq[SQLMetricInfo]) {
+    val metrics: Seq[SQLMetricInfo],
+    val nodeId: Int = 0,
+    val properties: Properties = new Properties()) {
 
   override def hashCode(): Int = {
     // hashCode of simpleString should be good enough to distinguish the plans from each other
@@ -75,11 +75,11 @@ private[execution] object SparkPlanInfo {
     val properties = plan.session.sparkContext.localProperties.get()
     new SparkPlanInfo(
       plan.nodeName,
-      plan.id,
-      properties,
       plan.simpleString(SQLConf.get.maxToStringFields),
       children.map(fromSparkPlan),
       metadata,
-      metrics)
+      metrics,
+      plan.id,
+      properties)
   }
 }
