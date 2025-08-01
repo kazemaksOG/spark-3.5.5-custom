@@ -32,8 +32,8 @@ import org.apache.spark.sql.internal.SQLConf
 @DeveloperApi
 class SparkPlanInfo(
     val nodeName: String,
-    val nodeId: Int,
-    val properties: Properties,
+    val nodeId: Int = 0,
+    val properties: Properties = new Properties(),
     val simpleString: String,
     val children: Seq[SparkPlanInfo],
     val metadata: Map[String, String],
